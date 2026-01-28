@@ -766,37 +766,31 @@
             return null;
         }
 
-        // 获取每日种子（基于日期）
-        function getDailySeed() {
-            const today = new Date();
-            return today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-        }
-
-        // 基于种子的随机数生成器
-        function seededRandom(seed) {
-            const x = Math.sin(seed++) * 10000;
-            return x - Math.floor(x);
+        // Fisher-Yates 洗牌算法（真随机）
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
         }
 
         // 从本地数据选择语录（快速）
         function selectLocalQuotes() {
-            const seed = getDailySeed();
             const getLength = (q) => typeof q === 'string' ? q.length : q.content.length;
             const longQuotes = allQuotes.filter(q => getLength(q) >= 15);
 
             // 转换为对象格式
-            shuffledAllQuotes = longQuotes.map(q => {
+            const quotesAsObjects = longQuotes.map(q => {
                 if (typeof q === 'string') {
                     return { content: q, source: inferSource(q), explanation: '' };
                 }
                 return { ...q, explanation: q.explanation || '' };
             });
 
-            // Fisher-Yates 洗牌算法（使用固定种子）
-            for (let i = shuffledAllQuotes.length - 1; i > 0; i--) {
-                const j = Math.floor(seededRandom(seed + i) * (i + 1));
-                [shuffledAllQuotes[i], shuffledAllQuotes[j]] = [shuffledAllQuotes[j], shuffledAllQuotes[i]];
-            }
+            // 使用真随机洗牌
+            shuffledAllQuotes = shuffleArray(quotesAsObjects);
 
             // 返回初始批次
             loadedCount = Math.min(BATCH_SIZE, shuffledAllQuotes.length);
@@ -837,13 +831,9 @@
 
                 if (apiQuotes && apiQuotes.length >= 10) {
                     console.log('API数据获取成功，已更新语录');
-                    const seed = getDailySeed();
-                    shuffledAllQuotes = [...apiQuotes];
 
-                    for (let i = shuffledAllQuotes.length - 1; i > 0; i--) {
-                        const j = Math.floor(seededRandom(seed + i) * (i + 1));
-                        [shuffledAllQuotes[i], shuffledAllQuotes[j]] = [shuffledAllQuotes[j], shuffledAllQuotes[i]];
-                    }
+                    // 使用真随机洗牌
+                    shuffledAllQuotes = shuffleArray(apiQuotes);
 
                     loadedCount = Math.min(BATCH_SIZE, shuffledAllQuotes.length);
                     currentQuotes = shuffledAllQuotes.slice(0, loadedCount);
